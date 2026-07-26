@@ -24,33 +24,6 @@ source "${SRC}"/lib/functions/artifacts/artifact-armbian-bsp-cli.sh
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/artifacts/artifact-armbian-bsp-desktop.sh
-# shellcheck source=lib/functions/artifacts/artifact-armbian-bsp-desktop.sh
-source "${SRC}"/lib/functions/artifacts/artifact-armbian-bsp-desktop.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/artifacts/artifact-armbian-config.sh
-# shellcheck source=lib/functions/artifacts/artifact-armbian-config.sh
-source "${SRC}"/lib/functions/artifacts/artifact-armbian-config.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/artifacts/artifact-armbian-desktop.sh
-# shellcheck source=lib/functions/artifacts/artifact-armbian-desktop.sh
-source "${SRC}"/lib/functions/artifacts/artifact-armbian-desktop.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
 ### lib/functions/artifacts/artifact-armbian-plymouth-theme.sh
 # shellcheck source=lib/functions/artifacts/artifact-armbian-plymouth-theme.sh
 source "${SRC}"/lib/functions/artifacts/artifact-armbian-plymouth-theme.sh
@@ -114,15 +87,6 @@ source "${SRC}"/lib/functions/artifacts/artifact-rootfs.sh
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/artifacts/artifact-uboot.sh
-# shellcheck source=lib/functions/artifacts/artifact-uboot.sh
-source "${SRC}"/lib/functions/artifacts/artifact-uboot.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
 ### lib/functions/artifacts/artifacts-obtain.sh
 # shellcheck source=lib/functions/artifacts/artifacts-obtain.sh
 source "${SRC}"/lib/functions/artifacts/artifacts-obtain.sh
@@ -150,18 +114,18 @@ source "${SRC}"/lib/functions/artifacts/artifacts-reversion.sh
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/bsp/armbian-bsp-cli-deb.sh
-# shellcheck source=lib/functions/bsp/armbian-bsp-cli-deb.sh
-source "${SRC}"/lib/functions/bsp/armbian-bsp-cli-deb.sh
+### lib/functions/artifacts/artifact-uboot.sh
+# shellcheck source=lib/functions/artifacts/artifact-uboot.sh
+source "${SRC}"/lib/functions/artifacts/artifact-uboot.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/bsp/armbian-bsp-desktop-deb.sh
-# shellcheck source=lib/functions/bsp/armbian-bsp-desktop-deb.sh
-source "${SRC}"/lib/functions/bsp/armbian-bsp-desktop-deb.sh
+### lib/functions/bsp/armbian-bsp-cli-deb.sh
+# shellcheck source=lib/functions/bsp/armbian-bsp-cli-deb.sh
+source "${SRC}"/lib/functions/bsp/armbian-bsp-cli-deb.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
@@ -267,6 +231,15 @@ source "${SRC}"/lib/functions/cli/cli-requirements.sh
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
+### lib/functions/cli/cli-show-extensions.sh
+# shellcheck source=lib/functions/cli/cli-show-extensions.sh
+source "${SRC}"/lib/functions/cli/cli-show-extensions.sh
+
+# no errors tolerated. invoked before each sourced file to make sure.
+#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
+#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
+set -o errtrace # trace ERR through - enabled
+set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
 ### lib/functions/cli/cli-undecided.sh
 # shellcheck source=lib/functions/cli/cli-undecided.sh
 source "${SRC}"/lib/functions/cli/cli-undecided.sh
@@ -321,6 +294,15 @@ source "${SRC}"/lib/functions/compilation/atf.sh
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
+### lib/functions/compilation/stubble.sh
+# shellcheck source=lib/functions/compilation/stubble.sh
+source "${SRC}"/lib/functions/compilation/stubble.sh
+
+# no errors tolerated. invoked before each sourced file to make sure.
+#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
+#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
+set -o errtrace # trace ERR through - enabled
+set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
 ### lib/functions/compilation/ccache.sh
 # shellcheck source=lib/functions/compilation/ccache.sh
 source "${SRC}"/lib/functions/compilation/ccache.sh
@@ -360,6 +342,15 @@ set -o errexit  ## set -e : exit the script if any statement returns a non-true 
 ### lib/functions/compilation/kernel-debs.sh
 # shellcheck source=lib/functions/compilation/kernel-debs.sh
 source "${SRC}"/lib/functions/compilation/kernel-debs.sh
+
+# no errors tolerated. invoked before each sourced file to make sure.
+#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
+#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
+set -o errtrace # trace ERR through - enabled
+set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
+### lib/functions/compilation/kernel-dts-check.sh
+# shellcheck source=lib/functions/compilation/kernel-dts-check.sh
+source "${SRC}"/lib/functions/compilation/kernel-dts-check.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
@@ -414,24 +405,6 @@ set -o errexit  ## set -e : exit the script if any statement returns a non-true 
 ### lib/functions/compilation/kernel.sh
 # shellcheck source=lib/functions/compilation/kernel.sh
 source "${SRC}"/lib/functions/compilation/kernel.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/compilation/packages/armbian-config-deb.sh
-# shellcheck source=lib/functions/compilation/packages/armbian-config-deb.sh
-source "${SRC}"/lib/functions/compilation/packages/armbian-config-deb.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/compilation/packages/armbian-desktop-deb.sh
-# shellcheck source=lib/functions/compilation/packages/armbian-desktop-deb.sh
-source "${SRC}"/lib/functions/compilation/packages/armbian-desktop-deb.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
@@ -672,18 +645,18 @@ source "${SRC}"/lib/functions/general/deprecations.sh
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/general/downloads.sh
-# shellcheck source=lib/functions/general/downloads.sh
-source "${SRC}"/lib/functions/general/downloads.sh
+### lib/functions/general/extensions.sh
+# shellcheck source=lib/functions/general/extensions.sh
+source "${SRC}"/lib/functions/general/extensions.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
 #set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
 set -o errtrace # trace ERR through - enabled
 set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/general/extensions.sh
-# shellcheck source=lib/functions/general/extensions.sh
-source "${SRC}"/lib/functions/general/extensions.sh
+### lib/functions/general/github-actions.sh
+# shellcheck source=lib/functions/general/github-actions.sh
+source "${SRC}"/lib/functions/general/github-actions.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
@@ -702,15 +675,6 @@ set -o errexit  ## set -e : exit the script if any statement returns a non-true 
 ### lib/functions/general/git.sh
 # shellcheck source=lib/functions/general/git.sh
 source "${SRC}"/lib/functions/general/git.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/general/github-actions.sh
-# shellcheck source=lib/functions/general/github-actions.sh
-source "${SRC}"/lib/functions/general/github-actions.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
@@ -792,15 +756,6 @@ set -o errexit  ## set -e : exit the script if any statement returns a non-true 
 ### lib/functions/host/docker.sh
 # shellcheck source=lib/functions/host/docker.sh
 source "${SRC}"/lib/functions/host/docker.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/host/external-toolchains.sh
-# shellcheck source=lib/functions/host/external-toolchains.sh
-source "${SRC}"/lib/functions/host/external-toolchains.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"
@@ -1152,15 +1107,6 @@ set -o errexit  ## set -e : exit the script if any statement returns a non-true 
 ### lib/functions/rootfs/rootfs-create.sh
 # shellcheck source=lib/functions/rootfs/rootfs-create.sh
 source "${SRC}"/lib/functions/rootfs/rootfs-create.sh
-
-# no errors tolerated. invoked before each sourced file to make sure.
-#set -o pipefail  # trace ERR through pipes - will be enabled "soon"
-#set -o nounset   ## set -u : exit the script if you try to use an uninitialised variable - one day will be enabled
-set -o errtrace # trace ERR through - enabled
-set -o errexit  ## set -e : exit the script if any statement returns a non-true return value - enabled
-### lib/functions/rootfs/rootfs-desktop.sh
-# shellcheck source=lib/functions/rootfs/rootfs-desktop.sh
-source "${SRC}"/lib/functions/rootfs/rootfs-desktop.sh
 
 # no errors tolerated. invoked before each sourced file to make sure.
 #set -o pipefail  # trace ERR through pipes - will be enabled "soon"

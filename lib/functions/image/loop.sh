@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -19,7 +19,7 @@ function check_loop_device() {
 
 function check_loop_device_internal() {
 	local device="${1}"
-	display_alert "Checking look device" "${device}" "debug"
+	display_alert "Checking loop device" "${device}" "debug"
 	if [[ ! -b "${device}" ]]; then
 		if [[ $CONTAINER_COMPAT == yes && -b "/tmp/${device}" ]]; then
 			display_alert "Creating device node" "${device}"

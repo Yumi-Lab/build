@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -166,7 +166,11 @@ function config_early_init() {
 
 	display_alert "Starting single build process" "${BOARD:-"no BOARD set"}" "info"
 
-	declare -g -a KERNEL_DRIVERS_SKIP=() # Prepare array to be filled in by board/family/extensions
+	# Do not initialize an empty array if it exists.
+	if [[ "${KERNEL_DRIVERS_SKIP[*]}" == "" ]]; then
+		# Prepare array to be filled in by board/family/extensions
+		declare -g -a KERNEL_DRIVERS_SKIP=()
+	fi
 
 	silent="yes" track_general_config_variables "after config_early_init" # don't log anything, just init the change tracking
 
@@ -300,6 +304,9 @@ function config_post_main() {
 	# Do some sanity checks for userspace stuff, if RELEASE/DESKTOP_ENVIRONMENT is set.
 	check_config_userspace_release_and_desktop
 
+	# late Userspace / package list fixes; RELEASE and DISTRIBUTION must be set.
+	fix_userspace_packages_release_and_distro
+
 	track_general_config_variables "before calling extension_finish_config"
 	display_alert "Extensions: finish configuration" "extension_finish_config" "debug"
 	call_extension_method "extension_finish_config" <<- 'EXTENSION_FINISH_CONFIG'
@@ -350,34 +357,32 @@ function check_config_userspace_release_and_desktop() {
 			exit_with_target_not_supported_error "RELEASE '${RELEASE}' does not support ARCH '${ARCH}'; see ${release_distro_arches_file}"
 		fi
 
-		# Desktop sanity checks, in the same vein.
+		# Desktop sanity checks.
 		if [[ "${DESKTOP_ENVIRONMENT}" != "" ]]; then
-
-			# If DESKTOP_ENVIRONMENT is set, but BUILD_DESKTOP is not, then we have a problem.
 			if [[ "${BUILD_DESKTOP}" != "yes" ]]; then
 				exit_with_error "DESKTOP_ENVIRONMENT is set, but BUILD_DESKTOP is not ==yes - please fix your parameters."
 			fi
-
-			declare desktop_release_distro_dir="${SRC}/config/desktop/${RELEASE}/environments/${DESKTOP_ENVIRONMENT}"
-			declare desktop_release_distro_arches_file="${release_distro_dir}/architectures"
-
-			if [[ ! -d "${desktop_release_distro_dir}" ]]; then
-				exit_with_target_not_supported_error "RELEASE '${RELEASE}' and Desktop Environment '${DESKTOP_ENVIRONMENT}' combination is not supported; there is no '${desktop_release_distro_dir}' directory."
-			fi
-
-			if [[ ! -f "${desktop_release_distro_arches_file}" ]]; then
-				exit_with_target_not_supported_error "RELEASE '${RELEASE}' and Desktop Environment '${DESKTOP_ENVIRONMENT}' combination is not supported; there is no '${desktop_release_distro_arches_file}' file."
-			fi
-
-			if grep -q "${ARCH}" "${desktop_release_distro_arches_file}"; then
-				display_alert "RELEASE '${RELEASE}' and Desktop Environment '${DESKTOP_ENVIRONMENT}' combination is supported" "RELEASE=${RELEASE} ARCH=${ARCH}; see ${desktop_release_distro_arches_file}" "debug"
-			else
-				exit_with_target_not_supported_error "RELEASE '${RELEASE}' and Desktop Environment '${DESKTOP_ENVIRONMENT}' combination is not supported; see ${desktop_release_distro_arches_file}"
-			fi
+			# Validation of (RELEASE, ARCH, DESKTOP_ENVIRONMENT) support is
+			# deferred to armbian-config's module_desktops install call in
+			# distro-agnostic.sh — it checks the YAML definitions and
+			# fails with a clear message if the combo isn't covered.
 		fi
 	fi
 
 	return 0
+}
+
+function fix_userspace_packages_release_and_distro() {
+	display_alert "fix_userspace_packages_release_and_distro" "For distro '${DISTRIBUTION}' release '${RELEASE}'" "debug"
+
+	# Some old hack from the past, not sure if it's still needed. Originally from https://github.com/armbian/build/pull/5881
+	if [[ $RELEASE == trixie || $ARCH == riscv64 ]]; then remove_packages "cpufrequtils"; fi # this will remove from rootfs as well
+
+	# Debian: no need for this package in the rootfs, as it provides add-apt-repository which is not used on our Debian builds
+	if [[ "${DISTRIBUTION}" == "Debian" ]]; then
+		display_alert "Not-installing software-properties-common" "For distro '${DISTRIBUTION}' release '${RELEASE}'" "warn"
+		remove_packages "software-properties-common" "software-properties-gtk" "software-properties-common"
+	fi
 }
 
 # Some utility functions

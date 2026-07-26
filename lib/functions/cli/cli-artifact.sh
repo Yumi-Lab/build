@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -32,8 +32,13 @@ function cli_artifact_run() {
 
 	display_alert "artifact" "${chosen_artifact}" "debug"
 	display_alert "artifact" "${chosen_artifact} :: ${chosen_artifact_impl}()" "debug"
+
+	track_general_config_variables "in cli_artifact_run before artifact_cli_adapter_config_prep"
+
 	declare -g artifact_version_requires_aggregation="no" # marker
 	artifact_cli_adapter_config_prep                      # only if in cli.
+
+	track_general_config_variables "in cli_artifact_run after artifact_cli_adapter_config_prep"
 
 	# if asked by _config_prep to aggregate, and HOSTRELEASE is not set, obtain it.
 	if [[ "${artifact_version_requires_aggregation}" == "yes" ]] && [[ -z "${HOSTRELEASE}" ]]; then

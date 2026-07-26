@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -15,7 +15,7 @@ function cli_patch_kernel_pre_run() {
 	# inside-function-function: a dynamic hook, only triggered if this CLI runs.
 	# install openssh-client, we'll need it to push the patched tree.
 	function add_host_dependencies__ssh_client_for_patch_pushing_over_ssh() {
-		declare -g EXTRA_BUILD_DEPS="${EXTRA_BUILD_DEPS} openssh-client"
+		EXTRA_BUILD_DEPS+=("openssh-client")
 	}
 
 	# "gimme root on a Linux machine"

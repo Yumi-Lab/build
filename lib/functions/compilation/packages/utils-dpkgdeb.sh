@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -183,3 +183,5 @@ function generic_artifact_package_hook_helper() {
 	# produce log asset for script (@TODO: batcat?)
 	LOG_ASSET="deb-${artifact_name:?}-${script}.sh" do_with_log_asset run_host_command_logged cat "${package_DEBIAN_dir}/${script}"
 }
+
+# 2024-07-20: change here to force a rebuild of hopefully all artifacts.

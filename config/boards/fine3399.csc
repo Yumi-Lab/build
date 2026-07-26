@@ -1,9 +1,12 @@
 # Rockchip RK3399 hexa core 4GB SoC eMMC GBE USB3 WiFi
 BOARD_NAME="Fine3399"
+BOARD_VENDOR="rockchip"
 BOARDFAMILY="rockchip64"
-BOARD_MAINTAINER=""
+BOARD_MAINTAINER="Lemon1151"
+INTRODUCED="2024"
 BOOTCONFIG="fine3399-rk3399_defconfig"
 KERNEL_TARGET="current,edge"
+KERNEL_TEST_TARGET="current"
 FULL_DESKTOP="yes"
 BOOT_LOGO="desktop"
 BOOT_FDT_FILE="rockchip/rk3399-fine3399.dtb"

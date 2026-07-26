@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -23,7 +23,7 @@ function do_main_configuration() {
 	# common options
 	declare revision_from="set in env or command-line parameter"
 	if [[ "${REVISION}" == "" ]]; then
-		if [ -f "${USERPATCHES_PATH}"/VERSION ]; then
+		if [[ -f "${USERPATCHES_PATH}/VERSION" ]]; then
 			REVISION=$(cat "${USERPATCHES_PATH}"/VERSION)
 			revision_from="userpatches VERSION file"
 		else
@@ -47,6 +47,7 @@ function do_main_configuration() {
 		unset VENDORSUPPORT,VENDORPRIVACY,VENDORBUGS,VENDORLOGO,ROOTPWD,MAINTAINER,MAINTAINERMAIL
 	fi
 
+	[[ -z $VENDORCOLOR ]] && VENDORCOLOR="247;16;0" # RGB values for MOTD logo
 	[[ -z $VENDORURL ]] && VENDORURL="https://duckduckgo.com/"
 	[[ -z $VENDORSUPPORT ]] && VENDORSUPPORT="https://community.armbian.com/"
 	[[ -z $VENDORPRIVACY ]] && VENDORPRIVACY="https://duckduckgo.com/"
@@ -59,7 +60,36 @@ function do_main_configuration() {
 	DEST_LANG="${DEST_LANG:-"en_US.UTF-8"}"                                   # en_US.UTF-8 is default locale for target
 	display_alert "DEST_LANG..." "DEST_LANG: ${DEST_LANG}" "debug"
 
-	declare -g SKIP_EXTERNAL_TOOLCHAINS="${SKIP_EXTERNAL_TOOLCHAINS:-yes}" # don't use any external toolchains, by default.
+	declare -g USE_CCACHE="${USE_CCACHE:-no}" # stop using ccache as our worktree is more effective
+
+	# Armbian config is central tool used in all builds. As its build externally, we have moved it to extension. Enable it here.
+	enable_extension "armbian-config"
+
+	# Fix binman pkg_resources removal in setuptools >= 82. Can be removed when all U-Boot versions are >= v2025.10.
+	enable_extension "uboot-binman-fix-pkg-resources"
+
+	# Fix old U-Boot pylibfdt failing against SWIG >= 4.3 (trixie). No-op on newer U-Boot. Can be removed when all U-Boot versions are >= v2026.07.
+	enable_extension "uboot-fix-pylibfdt-swig"
+
+	# Network stack to use, default to network-manager; configuration can override this.
+	# Will be made read-only further down.
+	declare -g NETWORKING_STACK="${NETWORKING_STACK}"
+
+	# If empty, default depending on BUILD_MINIMAL; if yes, use systemd-networkd; if no, use network-manager.
+	if [[ -z "${NETWORKING_STACK}" ]]; then
+		display_alert "NETWORKING_STACK not set" "Calculating defaults" "debug"
+		# Network-manager and Chrony for standard CLI and desktop, systemd-networkd and systemd-timesyncd for minimal
+		# systemd-timesyncd is slimmer and less resource intensive than Chrony, see https://unix.stackexchange.com/questions/504381/chrony-vs-systemd-timesyncd-what-are-the-differences-and-use-cases-as-ntp-cli
+		if [[ "${BUILD_MINIMAL}" == "yes" ]]; then
+			display_alert "BUILD_MINIMAL is set to yes" "Using systemd-networkd" "debug"
+			NETWORKING_STACK="systemd-networkd"
+		else
+			display_alert "BUILD_MINIMAL not set to yes" "Using network-manager" "debug"
+			NETWORKING_STACK="network-manager"
+		fi
+	else
+		display_alert "NETWORKING_STACK is preset during configuration" "NETWORKING_STACK: ${NETWORKING_STACK}" "debug"
+	fi
 
 	# Timezone
 	if [[ -f /etc/timezone ]]; then # Timezone for target is taken from host, if it exists.
@@ -70,10 +100,8 @@ function do_main_configuration() {
 		TZDATA="Etc/UTC" # If not /etc/timezone at host, default to UTC.
 	fi
 
-	USEALLCORES=yes # Use all CPU cores for compiling
-
 	[[ -z $EXIT_PATCHING_ERROR ]] && EXIT_PATCHING_ERROR="" # exit patching if failed
-	[[ -z $HOST ]] && HOST="$BOARD"                         # set hostname to the board
+	[[ -z $HOST ]] && HOST="$BOARD"
 	cd "${SRC}" || exit
 
 	[[ -z "${CHROOT_CACHE_VERSION}" ]] && CHROOT_CACHE_VERSION=7
@@ -138,18 +166,21 @@ function do_main_configuration() {
 			;;
 	esac
 
-	# Check if the filesystem type is supported by the build host
-	if [[ $CONFIG_DEFS_ONLY != yes ]]; then # don't waste time if only gathering config defs
+	# Check if the filesystem type is supported by the build host.
+	# Skipped for nfs / nfs-root: these rootfs types produce a tarball on the
+	# host (rootfs-to-image.sh `tar | gzip`) and never mount NFS locally — the
+	# target's kernel mounts it at boot time, so host FS support is irrelevant.
+	if [[ $CONFIG_DEFS_ONLY != yes && $ROOTFS_TYPE != nfs && $ROOTFS_TYPE != nfs-root ]]; then # don't waste time if only gathering config defs
 		check_filesystem_compatibility_on_host
 	fi
 
 	# Support for LUKS / cryptroot
 	if [[ $CRYPTROOT_ENABLE == yes ]]; then
-		enable_extension "fs-cryptroot-support" # add the tooling needed, cryptsetup
-		ROOT_MAPPER="armbian-root"              # TODO: fixed name can't be used for parallel image building (rpardini: ?)
-		if [[ -z $CRYPTROOT_PASSPHRASE ]]; then # a passphrase is mandatory if rootfs encryption is enabled
-			exit_with_error "Root encryption is enabled but CRYPTROOT_PASSPHRASE is not set"
+		enable_extension "fs-cryptroot-support"                                   # add the tooling needed, cryptsetup
+		if [[ -z $CRYPTROOT_PASSPHRASE ]] && [[ -z $CRYPTROOT_AUTOUNLOCK ]]; then # a passphrase is mandatory if rootfs encryption is enabled, unless CRYPTROOT_AUTOUNLOCK is wanted
+			exit_with_error "Root encryption is enabled but CRYPTROOT_PASSPHRASE or CRYPTROOT_AUTOUNLOCK is not set"
 		fi
+		[[ -z $CRYPTROOT_MAPPER ]] && CRYPTROOT_MAPPER="armbian-root" # TODO: fixed name can't be used for parallel image building (rpardini: ?)
 		[[ -z $CRYPTROOT_SSH_UNLOCK ]] && CRYPTROOT_SSH_UNLOCK=yes
 		[[ -z $CRYPTROOT_SSH_UNLOCK_PORT ]] && CRYPTROOT_SSH_UNLOCK_PORT=2022
 		# Default to pdkdf2, this used to be the default with cryptroot <= 2.0, however
@@ -166,8 +197,9 @@ function do_main_configuration() {
 		china)
 			[[ -z $USE_MAINLINE_GOOGLE_MIRROR ]] && [[ -z $MAINLINE_MIRROR ]] && MAINLINE_MIRROR=tuna
 			[[ -z $USE_GITHUB_UBOOT_MIRROR ]] && [[ -z $UBOOT_MIRROR ]] && UBOOT_MIRROR=gitee
-			[[ -z $GITHUB_MIRROR ]] && GITHUB_MIRROR=gitclone
+			[[ -z $GITHUB_MIRROR ]] && GITHUB_MIRROR=ghproxy
 			[[ -z $DOWNLOAD_MIRROR ]] && DOWNLOAD_MIRROR=china
+			[[ -z $GHCR_MIRROR ]] && GHCR_MIRROR=nju
 			;;
 		*) ;;
 
@@ -176,13 +208,22 @@ function do_main_configuration() {
 	# Defaults... # @TODO: why?
 	declare -g -r MAINLINE_UBOOT_DIR='u-boot'
 
+	# Opt-in cache-bust string for the u-boot artifact. A board/family that ships a
+	# prebuilt or externally-fetched u-boot blob (e.g. khadas-vim1/vim2) sets this —
+	# typically to the blob's upstream version — and bumps it whenever the blob
+	# changes, so the u-boot .deb repackages instead of reusing the cached artifact.
+	# It can't be a content hash: the blob may live outside this repo and not exist
+	# yet at matrix-prep. Folded into the artifact version by artifact-uboot.sh.
+	# (`:-` so it never clobbers a value a board/family already set.)
+	declare -g UBOOT_HASH_EXTRA="${UBOOT_HASH_EXTRA:-}"
+
 	# pre-calculate mirrors. important: this sets _SOURCE variants that might be used in common.conf to default things to mainline, but using mirror.
 	# @TODO: setting them here allows family/board code (and hooks) to read them and embed them into configuration, which is bad: it might end up without the mirror.
 	[[ $USE_MAINLINE_GOOGLE_MIRROR == yes ]] && MAINLINE_MIRROR=google
 
 	case $MAINLINE_MIRROR in
 		google)
-			declare -g -r MAINLINE_KERNEL_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable'
+			declare -g -r MAINLINE_KERNEL_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable.git'
 			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware.git'
 			;;
 		tuna)
@@ -193,6 +234,10 @@ function do_main_configuration() {
 			declare -g -r MAINLINE_KERNEL_SOURCE='https://mirrors.bfsu.edu.cn/git/linux-stable.git'
 			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://mirrors.bfsu.edu.cn/git/linux-firmware.git'
 			;;
+		gitverse)
+			declare -g -r MAINLINE_KERNEL_SOURCE='https://gitverse.ru/pbs-sunflower/linux-stable.git'
+			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://gitverse.ru/pbs-sunflower/linux-firmware.git'
+			;;
 		*)
 			declare -g -r MAINLINE_KERNEL_SOURCE='https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git' # "linux-stable" was renamed to "linux"
 			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git'
@@ -201,25 +246,21 @@ function do_main_configuration() {
 
 	[[ $USE_GITHUB_UBOOT_MIRROR == yes ]] && UBOOT_MIRROR=github # legacy compatibility?
 
-	case $UBOOT_MIRROR in
-		gitee)
-			declare -g -r MAINLINE_UBOOT_SOURCE='https://gitee.com/mirrors/u-boot.git'
-			;;
-		denx)
-			declare -g -r MAINLINE_UBOOT_SOURCE='https://source.denx.de/u-boot/u-boot.git'
-			;;
-		*)
-			declare -g -r MAINLINE_UBOOT_SOURCE='https://github.com/u-boot/u-boot'
-			;;
-	esac
+	# A CI runner that advertises a pass-through git proxy (GITPROXY_ADDRESS,
+	# exported from NetBox by the runner) selects the gitproxy mirror
+	# automatically, unless an explicit GITHUB_MIRROR was already set.
+	[[ -z $GITHUB_MIRROR && -n ${GITPROXY_ADDRESS:-} ]] && GITHUB_MIRROR=gitproxy
 
 	case $GITHUB_MIRROR in
 		fastgit)
 			declare -g -r GITHUB_SOURCE='https://hub.fastgit.xyz'
 			;;
 		ghproxy)
-			[[ -z $GHPROXY_ADDRESS ]] && GHPROXY_ADDRESS=mirror.ghproxy.com
+			[[ -z $GHPROXY_ADDRESS ]] && GHPROXY_ADDRESS=ghfast.top
 			declare -g -r GITHUB_SOURCE="https://${GHPROXY_ADDRESS}/https://github.com"
+			;;
+		gitproxy)
+			declare -g -r GITHUB_SOURCE="${GITPROXY_ADDRESS}"
 			;;
 		gitclone)
 			declare -g -r GITHUB_SOURCE='https://gitclone.com/github.com'
@@ -229,9 +270,25 @@ function do_main_configuration() {
 			;;
 	esac
 
+	case $UBOOT_MIRROR in
+		gitee)
+			declare -g -r MAINLINE_UBOOT_SOURCE='https://gitee.com/mirrors/u-boot.git'
+			;;
+		denx)
+			declare -g -r MAINLINE_UBOOT_SOURCE='https://source.denx.de/u-boot/u-boot.git'
+			;;
+		*)
+			declare -g -r MAINLINE_UBOOT_SOURCE="${GITHUB_SOURCE}/u-boot/u-boot"
+			;;
+	esac
+
 	case $GHCR_MIRROR in
 		dockerproxy)
-			declare -g -r GHCR_SOURCE='ghcr.dockerproxy.com'
+			GHCR_MIRROR_ADDRESS="${GHCR_MIRROR_ADDRESS:-"ghcr.dockerproxy.net"}"
+			declare -g -r GHCR_SOURCE=$GHCR_MIRROR_ADDRESS
+			;;
+		nju)
+			declare -g -r GHCR_SOURCE='ghcr.nju.edu.cn'
 			;;
 		*)
 			declare -g -r GHCR_SOURCE='ghcr.io'
@@ -242,7 +299,6 @@ function do_main_configuration() {
 	[[ -z $OFFSET ]] && OFFSET=4 # offset to 1st partition (we use 4MiB boundaries by default)
 	[[ -z $ARCH ]] && ARCH=arm64 # makes little sense to default to anything... # @TODO: remove, but check_config_userspace_release_and_desktop requires it
 	ATF_COMPILE=yes              # @TODO: move to armhf/arm64
-	[[ -z $WIREGUARD ]] && WIREGUARD="yes"
 	[[ -z $EXTRAWIFI ]] && EXTRAWIFI="yes"
 	[[ -z $PLYMOUTH ]] && PLYMOUTH="yes"
 	[[ -z $AUFS ]] && AUFS="yes"
@@ -254,13 +310,45 @@ function do_main_configuration() {
 	# single ext4 partition is the default and preferred configuration
 	#BOOTFS_TYPE=''
 
-	## ------ Sourcing family config ---------------------------
+	###
+	### ------------------- Sourcing family config -------------------
+	###
 	source_family_config_and_arch
 
 	if [[ "$HAS_VIDEO_OUTPUT" == "no" ]]; then
 		PLYMOUTH="no"
 		[[ $BUILD_DESKTOP != "no" ]] && exit_with_error "HAS_VIDEO_OUTPUT is set to no. So we shouldn't build desktop environment"
 	fi
+
+	# Make NETWORKING_STACK read-only, as further changes would make the whole thing inconsistent.
+	# But only after family config to allow family to change it (post-family hooks CANNOT change NETWORKING_STACK since the hook is running after this).
+	# Individual networking extensions should _check_ this to make there's no spurious enablement.
+	display_alert "Using NETWORKING_STACK" "NETWORKING_STACK: ${NETWORKING_STACK}" "info"
+	declare -g -r NETWORKING_STACK="${NETWORKING_STACK}"
+
+	# Now enable extensions according to the configuration.
+	case "${NETWORKING_STACK}" in
+		"network-manager")
+			display_alert "Adding networking extensions" "net-network-manager, net-chrony" "info"
+			enable_extension "net-network-manager"
+			enable_extension "net-chrony"
+			;;
+		"systemd-networkd")
+			display_alert "Adding networking extensions" "net-systemd-networkd, net-systemd-timesyncd" "info"
+			enable_extension "net-systemd-networkd"
+			enable_extension "net-systemd-timesyncd"
+			;;
+		"none")
+			display_alert "NETWORKING_STACK=${NETWORKING_STACK}" "Not adding networking extensions" "info"
+			;;
+		*)
+			display_alert "NETWORKING_STACK=${NETWORKING_STACK}" "Invalid value? Not adding networking extensions" "wrn"
+			;;
+	esac
+
+	# enable APA extension for Debian Unstable release
+	# loong64 is not supported now
+	#  [ "$RELEASE" = "sid" ] && [ "$ARCH" != "loong64" ] && enable_extension "apa"
 
 	## Extensions: at this point we've sourced all the config files that will be used,
 	##             and (hopefully) not yet invoked any extension methods. So this is the perfect
@@ -291,37 +379,33 @@ function do_main_configuration() {
 	declare -g -r PACKAGE_LIST_FAMILY="${PACKAGE_LIST_FAMILY}"
 	declare -g -r PACKAGE_LIST_FAMILY_REMOVE="${PACKAGE_LIST_FAMILY_REMOVE}"
 
-	if [[ $RELEASE == trixie || $ARCH == riscv64 ]]; then remove_packages "cpufrequtils"; fi # this will remove from rootfs as well
-
 	display_alert "Done with do_main_configuration" "do_main_configuration" "debug"
 }
 
 function do_extra_configuration() {
-	[[ -n $ATFSOURCE && -z $ATF_USE_GCC ]] && exit_with_error "Error in configuration: ATF_USE_GCC is unset"
-	[[ -z $UBOOT_USE_GCC ]] && exit_with_error "Error in configuration: UBOOT_USE_GCC is unset"
-	[[ -z $KERNEL_USE_GCC ]] && exit_with_error "Error in configuration: KERNEL_USE_GCC is unset"
-
 	declare BOOTCONFIG_VAR_NAME="BOOTCONFIG_${BRANCH^^}" # Branch name, uppercase
 	BOOTCONFIG_VAR_NAME=${BOOTCONFIG_VAR_NAME//-/_}      # Replace dashes with underscores
 	[[ -n ${!BOOTCONFIG_VAR_NAME} ]] && BOOTCONFIG=${!BOOTCONFIG_VAR_NAME}
 	[[ -z $BOOTPATCHDIR ]] && BOOTPATCHDIR="u-boot-$LINUXFAMILY" # @TODO move to hook
 	[[ -z $ATFPATCHDIR ]] && ATFPATCHDIR="atf-$LINUXFAMILY"
 
-	if [[ "$RELEASE" =~ ^(focal|jammy|noble|oracular)$ ]]; then
+	if [[ "$RELEASE" =~ ^(focal|jammy|noble|oracular|plucky|questing|resolute)$ ]]; then
 		DISTRIBUTION="Ubuntu"
 	else
 		DISTRIBUTION="Debian"
 	fi
 
 	DEBIAN_MIRROR='deb.debian.org/debian'
-	DEBIAN_SECURTY='security.debian.org/'
+	# loong64 is using debian-ports repo now
+	[[ "${ARCH}" == "loong64" ]] && DEBIAN_MIRROR='deb.debian.org/debian-ports'
+	DEBIAN_SECURITY='security.debian.org/'
 	[[ "${ARCH}" == "amd64" ]] &&
 		UBUNTU_MIRROR='archive.ubuntu.com/ubuntu/' ||
 		UBUNTU_MIRROR='ports.ubuntu.com/'
 
 	if [[ $DOWNLOAD_MIRROR == "china" ]]; then
 		DEBIAN_MIRROR='mirrors.tuna.tsinghua.edu.cn/debian'
-		DEBIAN_SECURTY='mirrors.tuna.tsinghua.edu.cn/debian-security'
+		DEBIAN_SECURITY='mirrors.tuna.tsinghua.edu.cn/debian-security'
 		[[ "${ARCH}" == "amd64" ]] &&
 			UBUNTU_MIRROR='mirrors.tuna.tsinghua.edu.cn/ubuntu/' ||
 			UBUNTU_MIRROR='mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/'
@@ -329,7 +413,7 @@ function do_extra_configuration() {
 
 	if [[ $DOWNLOAD_MIRROR == "bfsu" ]]; then
 		DEBIAN_MIRROR='mirrors.bfsu.edu.cn/debian'
-		DEBIAN_SECURTY='mirrors.bfsu.edu.cn/debian-security'
+		DEBIAN_SECURITY='mirrors.bfsu.edu.cn/debian-security'
 		[[ "${ARCH}" == "amd64" ]] &&
 			UBUNTU_MIRROR='mirrors.bfsu.edu.cn/ubuntu/' ||
 			UBUNTU_MIRROR='mirrors.bfsu.edu.cn/ubuntu-ports/'
@@ -391,12 +475,23 @@ function do_extra_configuration() {
 		APT_MIRROR=$UBUNTU_MIRROR
 	fi
 
-	[[ -n "${APT_PROXY_ADDR}" ]] && display_alert "Using custom apt proxy address" "APT_PROXY_ADDR=${APT_PROXY_ADDR}" "info"
+	# Derive APT_PROXY_ADDR from proxy env vars if unset, which runners.sh uses inside chroot.
+	# Skip if MANAGE_ACNG is active to prevent conflicting behavior.
+	if [[ -z "${APT_PROXY_ADDR}" && -n "${http_proxy:-${https_proxy:-${HTTP_PROXY:-${HTTPS_PROXY:-}}}}" && (-z "${MANAGE_ACNG}" || "${MANAGE_ACNG}" == "no") ]]; then
+		APT_PROXY_ADDR="$(echo "${http_proxy:-${https_proxy:-${HTTP_PROXY:-${HTTPS_PROXY:-}}}}" | sed -E 's|https?://([^/]+).*|\1|')"
+		display_alert "Derived APT proxy address from proxy env vars" "${APT_PROXY_ADDR##*@}" "info"
+	fi
+	[[ -n "${APT_PROXY_ADDR}" ]] && display_alert "Using custom apt proxy address" "APT_PROXY_ADDR=${APT_PROXY_ADDR##*@}" "info"
 
 	# @TODO: allow to run aggregation, for CONFIG_DEFS_ONLY? rootfs_aggregate_packages
 
-	# Give the option to configure DNS server used in the chroot during the build process
-	[[ -z $NAMESERVER ]] && NAMESERVER="1.0.0.1" # default is cloudflare alternate
+	# Derive host DNS server so chroot can resolve hostnames on proxy; else, use cloudflare
+	if [[ -z "${NAMESERVER}" ]]; then
+		declare _dns_resolv_file="/etc/resolv.conf"
+		[[ -f "/run/systemd/resolve/resolv.conf" ]] && _dns_resolv_file="/run/systemd/resolve/resolv.conf"
+		NAMESERVER="$(awk '(/^nameserver/) && ($2 !~ /^127\./) && ($2 != "::1") && ($2 !~ /^fe80:/) {print $2; exit}' "${_dns_resolv_file}" 2> /dev/null)"
+		NAMESERVER="${NAMESERVER:-1.0.0.1}"
+	fi
 
 	# Consolidate the extra image suffix. loop and add.
 	declare EXTRA_IMAGE_SUFFIX=""
@@ -457,7 +552,7 @@ function write_config_summary_output_file() {
 		Minimal: $BUILD_MINIMAL
 		Desktop: $BUILD_DESKTOP
 		Desktop Environment: $DESKTOP_ENVIRONMENT
-		Software groups: $DESKTOP_APPGROUPS_SELECTED
+		Desktop Tier: $DESKTOP_TIER
 
 		Kernel configuration:
 		Repository: $KERNELSOURCE
@@ -529,8 +624,8 @@ function set_git_build_repo_url_and_commit_vars() {
 
 function check_filesystem_compatibility_on_host() {
 	if [[ -f "/proc/filesystems" ]]; then
-			# Check if the filesystem is listed in /proc/filesystems
-		if ! grep -q "\<$ROOTFS_TYPE\>" /proc/filesystems; then		# ensure exact match with \<...\>
+		# Check if the filesystem is listed in /proc/filesystems
+		if ! grep -q "\<$ROOTFS_TYPE\>" /proc/filesystems; then # ensure exact match with \<...\>
 			# Try modprobing the fs module since it doesn't show up in /proc/filesystems if it's an unloaded module versus built-in
 			if ! modprobe "$ROOTFS_TYPE"; then
 				exit_with_error "Filesystem type unsupported by build host:" "$ROOTFS_TYPE"
@@ -540,13 +635,13 @@ function check_filesystem_compatibility_on_host() {
 		fi
 
 		# For f2fs, check if support for extended attributes is enabled in kernel config (otherwise will fail later when using rsync)
-		if [ "$ROOTFS_TYPE" = "f2fs" ]; then
+		if [[ "$ROOTFS_TYPE" == "f2fs" ]]; then
 			local build_host_kernel_config=""
 
 			# Try to find kernel config in different places
-			if [ -f "/boot/config-$(uname -r)" ]; then
+			if [[ -f "/boot/config-$(uname -r)" ]]; then
 				build_host_kernel_config="/boot/config-$(uname -r)"
-			elif [ -f "/proc/config.gz" ]; then
+			elif [[ -f "/proc/config.gz" ]]; then
 				# Try to extract kernel config from /proc/config.gz
 				if command -v gzip &> /dev/null; then
 					gzip -dc /proc/config.gz > /tmp/build_host_kernel_config
@@ -559,10 +654,10 @@ function check_filesystem_compatibility_on_host() {
 			fi
 
 			# Check if required configurations are set
-			if [ -n "$build_host_kernel_config" ]; then
-				if ! grep -q '^CONFIG_F2FS_FS_XATTR=y$' "$build_host_kernel_config" || \
-				! grep -q '^CONFIG_F2FS_FS_SECURITY=y$' "$build_host_kernel_config"; then
-					exit_with_error "Required kernel configurations for f2fs filesystem not enabled." "Please enable CONFIG_F2FS_FS_XATTR and CONFIG_F2FS_FS_SECURITY in your kernel configuration." "err"
+			if [[ -n "$build_host_kernel_config" ]]; then
+				if ! grep -q '^CONFIG_F2FS_FS_XATTR=y$' "$build_host_kernel_config" ||
+					! grep -q '^CONFIG_F2FS_FS_SECURITY=y$' "$build_host_kernel_config"; then
+					exit_with_error "Required kernel configurations for f2fs filesystem not enabled." "Please enable CONFIG_F2FS_FS_XATTR and CONFIG_F2FS_FS_SECURITY in your host kernel configuration." "err"
 				fi
 			fi
 		fi
@@ -572,18 +667,17 @@ function check_filesystem_compatibility_on_host() {
 	return 0
 }
 
-function pre_install_distribution_specific__disable_cnf_apt_hook(){
+function pre_install_distribution_specific__disable_cnf_apt_hook() {
 	if [[ $(dpkg --print-architecture) != "${ARCH}" && -f "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found ]]; then #disable command-not-found (60% build-time saved under qemu)
-	display_alert "Disabling command-not-found during build-time to speed up image creation" "${BOARD}:${RELEASE}-${BRANCH}" "info"
-	run_host_command_logged mv "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found.disabled
-        fi
+		display_alert "Disabling command-not-found during build-time to speed up image creation" "${BOARD}:${RELEASE}-${BRANCH}" "info"
+		run_host_command_logged mv "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found.disabled
+	fi
 }
 
-
-function post_post_debootstrap_tweaks__restore_cnf_apt_hook(){
-	if [ -f "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found.disabled ]; then # (re-enable command-not-found after building rootfs if it's been disabled)
-	display_alert "Enabling command-not-found after build-time " "${BOARD}:${RELEASE}-${BRANCH}" "info"
-	run_host_command_logged mv "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found.disabled "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found
+function post_post_debootstrap_tweaks__restore_cnf_apt_hook() {
+	if [[ -f "${SDCARD}/etc/apt/apt.conf.d/50command-not-found.disabled" ]]; then # (re-enable command-not-found after building rootfs if it's been disabled)
+		display_alert "Enabling command-not-found after build-time " "${BOARD}:${RELEASE}-${BRANCH}" "info"
+		run_host_command_logged mv "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found.disabled "${SDCARD}"/etc/apt/apt.conf.d/50command-not-found
 	fi
 
 }

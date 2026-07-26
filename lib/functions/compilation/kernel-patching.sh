@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -31,7 +31,10 @@ function kernel_main_patching_python() {
 		#"BOARD="                                             # BOARD is needed for the patchset selection logic; mostly for u-boot. empty for kernel.
 		#"TARGET="                                            # TARGET is need for u-boot's SPI/SATA etc selection logic. empty for kernel
 		# For table generation to fit into the screen, or being large when in GHA.
-		"COLUMNS=${COLUMNS}"
+		# Prefer an explicit COLUMNS, else the terminal width captured at startup
+		# (ARMBIAN_TTY_COLUMNS); empty on piped/CI runs so patching.py picks a
+		# fixed wide width for logs instead of a synthetic narrow one.
+		"COLUMNS=${COLUMNS:-${ARMBIAN_TTY_COLUMNS:-}}"
 		"COLORFGBG=${COLORFGBG}"
 		"GITHUB_ACTIONS=${GITHUB_ACTIONS}"
 		# Needed so git can find the global .gitconfig, and Python can parse the PATH to determine which git to use.
@@ -57,7 +60,9 @@ function kernel_main_patching_python() {
 		"EXTRA_PATCH_FILES_FIRST=${kernel_drivers_patch_file}"  # Is a space-separated list.
 		"EXTRA_PATCH_HASHES_FIRST=${kernel_drivers_patch_hash}" # Is a space-separated list.
 	)
-	display_alert "Calling Python patching script" "for kernel" "info"
+	display_alert "Calling Python patching script for kernel:" "${KERNELSOURCE} - ${KERNELBRANCH}" "info"
+	display_alert "Using kernel patch dir:" "${KERNELPATCHDIR}" "info"
+
 	# "raw_command" is only for logging purposes.
 	raw_command="[...shortened kernel patching...] ${PYTHON3_INFO[BIN]} ${SRC}/lib/tools/patching.py" \
 		run_host_command_logged env -i "${params_quoted[@]@Q}" "${PYTHON3_INFO[BIN]}" "${SRC}/lib/tools/patching.py"
@@ -72,6 +77,14 @@ function kernel_main_patching() {
 	# kernel_drivers_create_patches will fill the variables below
 	declare kernel_drivers_patch_file kernel_drivers_patch_hash
 	LOG_SECTION="kernel_drivers_create_patches" do_with_logging do_with_hooks kernel_drivers_create_patches "${kernel_work_dir}" "${kernel_git_revision}"
+
+	call_extension_method "kernel_extra_create_patches" <<- 'KERNEL_EXTRA_CREATE_PATCHES'
+		*stage more patches for kernel, after kernel_drivers*
+		This is called after kernel_drivers_create_patches (wifi-drivers) and can be used to stage more patches
+		to be applied. This is done immediately before actually patching, and thus, after any hashing is done.
+		This allows implementors to stage custom patches (eg, from an out-of-tree driver into userpatches) without
+		impacting the kernel version/hash.
+	KERNEL_EXTRA_CREATE_PATCHES
 
 	# Python patching will git reset to the kernel SHA1 git revision, and remove all untracked files.
 	LOG_SECTION="kernel_main_patching_python" do_with_logging do_with_hooks kernel_main_patching_python

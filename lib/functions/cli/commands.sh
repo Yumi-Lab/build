@@ -2,13 +2,15 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
 
 function armbian_register_commands() {
 	# More than one command can map to the same handler. In that case, use ARMBIAN_COMMANDS_TO_VARS_DICT for specific vars.
+	# The handlers' functions "cli_${ARMBIAN_COMMAND_HANDLER}_pre_run" and "cli_${ARMBIAN_COMMAND_HANDLER}_run" get automatically called in "utils-cli.sh"
+	# Example: For command "docker-purge", the handler is "docker", which means the functions "cli_docker_pre_run" and "cli_docker_run" inside "cli-docker.sh are automatically called by "utils-cli.sh"
 	declare -g -A ARMBIAN_COMMANDS_TO_HANDLERS_DICT=(
 		["docker"]="docker" # thus requires cli_docker_pre_run and cli_docker_run
 		["docker-purge"]="docker"
@@ -19,34 +21,39 @@ function armbian_register_commands() {
 
 		["requirements"]="requirements" # implemented in cli_requirements_pre_run and cli_requirements_run
 
+		# List the extension hook points available in the build framework, by statically scanning the sources.
+		["show-extensions"]="show_extensions" # implemented in cli_show_extensions_pre_run and cli_show_extensions_run
+		["show-hooks"]="show_extensions"      # implemented in cli_show_extensions_pre_run and cli_show_extensions_run
+
 		# Given a board/config/exts, dump out the (non-userspace) JSON of configuration
 		["configdump"]="config_dump_json"          # implemented in cli_config_dump_json_pre_run and cli_config_dump_json_run
 		["config-dump"]="config_dump_json"         # implemented in cli_config_dump_json_pre_run and cli_config_dump_json_run
 		["config-dump-json"]="config_dump_json"    # implemented in cli_config_dump_json_pre_run and cli_config_dump_json_run
 		["config-dump-no-json"]="config_dump_json" # implemented in cli_config_dump_json_pre_run and cli_config_dump_json_run
 
-		["inventory"]="json_info"         # implemented in cli_json_info_pre_run and cli_json_info_run
-		["targets"]="json_info"           # implemented in cli_json_info_pre_run and cli_json_info_run
-		["targets-dashboard"]="json_info" # implemented in cli_json_info_pre_run and cli_json_info_run
-		["inventory-boards"]="json_info"  # implemented in cli_json_info_pre_run and cli_json_info_run
-		["targets-composed"]="json_info"  # implemented in cli_json_info_pre_run and cli_json_info_run
-		["debs-to-repo-json"]="json_info" # implemented in cli_json_info_pre_run and cli_json_info_run
-		["gha-matrix"]="json_info"        # implemented in cli_json_info_pre_run and cli_json_info_run
-		["gha-workflow"]="json_info"      # implemented in cli_json_info_pre_run and cli_json_info_run
-		["gha-template"]="json_info"      # implemented in cli_json_info_pre_run and cli_json_info_run
+		["inventory"]="json_info"           # implemented in cli_json_info_pre_run and cli_json_info_run
+		["targets"]="json_info"             # implemented in cli_json_info_pre_run and cli_json_info_run
+		["targets-dashboard"]="json_info"   # implemented in cli_json_info_pre_run and cli_json_info_run
+		["inventory-boards"]="json_info"    # implemented in cli_json_info_pre_run and cli_json_info_run
+		["inventory-artifacts"]="json_info" # implemented in cli_json_info_pre_run and cli_json_info_run
+		["targets-composed"]="json_info"    # implemented in cli_json_info_pre_run and cli_json_info_run
+		["debs-to-repo-json"]="json_info"   # implemented in cli_json_info_pre_run and cli_json_info_run
+		["gha-matrix"]="json_info"          # implemented in cli_json_info_pre_run and cli_json_info_run
+		["gha-workflow"]="json_info"        # implemented in cli_json_info_pre_run and cli_json_info_run
+		["gha-template"]="json_info"        # implemented in cli_json_info_pre_run and cli_json_info_run
 
 		# These probably should be in their own separate CLI commands file, but for now they're together in jsoninfo.
 		["debs-to-repo-download"]="json_info" # implemented in cli_json_info_pre_run and cli_json_info_run
 		["debs-to-repo-reprepro"]="json_info" # implemented in cli_json_info_pre_run and cli_json_info_run
 
 		# Patch to git & patch rewrite, for kernel
-		["kernel-patches-to-git"]="patch_kernel"  # implemented in cli_patch_kernel_pre_run and cli_patch_kernel_run
-		["rewrite-kernel-patches"]="patch_kernel" # implemented in cli_patch_kernel_pre_run and cli_patch_kernel_run
+		["kernel-patches-to-git"]="patch_kernel"                 # implemented in cli_patch_kernel_pre_run and cli_patch_kernel_run
+		["rewrite-kernel-patches"]="patch_kernel"                # implemented in cli_patch_kernel_pre_run and cli_patch_kernel_run
 		["rewrite-kernel-patches-needing-rebase"]="patch_kernel" # implemented in cli_patch_kernel_pre_run and cli_patch_kernel_run
 
 		# Patch to git & patch rewrite, for u-boot
-		["uboot-patches-to-git"]="patch_uboot"  # implemented in cli_patch_uboot_pre_run and cli_patch_uboot_run
-		["rewrite-uboot-patches"]="patch_uboot" # implemented in cli_patch_uboot_pre_run and cli_patch_uboot_run
+		["uboot-patches-to-git"]="patch_uboot"                 # implemented in cli_patch_uboot_pre_run and cli_patch_uboot_run
+		["rewrite-uboot-patches"]="patch_uboot"                # implemented in cli_patch_uboot_pre_run and cli_patch_uboot_run
 		["rewrite-uboot-patches-needing-rebase"]="patch_uboot" # implemented in cli_patch_uboot_pre_run and cli_patch_uboot_run
 
 		["build"]="standard_build" # implemented in cli_standard_build_pre_run and cli_standard_build_run
@@ -70,6 +77,9 @@ function armbian_register_commands() {
 		["kernel-config"]="artifact"
 		["rewrite-kernel-config"]="artifact"
 
+		# Patch kernel and then check & validate the dtb file
+		["dts-check"]="artifact" # Not really an artifact, but cli output only. Builds nothing.
+
 		["uboot"]="artifact"
 		["uboot-patch"]="artifact"
 		["atf-patch"]="artifact"
@@ -78,15 +88,12 @@ function armbian_register_commands() {
 
 		["firmware"]="artifact"
 		["firmware-full"]="artifact"
-		["armbian-config"]="artifact"
 		["armbian-zsh"]="artifact"
 		["armbian-plymouth-theme"]="artifact"
 		["fake-ubuntu-advantage-tools"]="artifact"
 
 		["armbian-base-files"]="artifact"
 		["armbian-bsp-cli"]="artifact"
-		["armbian-bsp-desktop"]="artifact"
-		["armbian-desktop"]="artifact"
 
 		["undecided"]="undecided" # implemented in cli_undecided_pre_run and cli_undecided_run - relaunches either build or docker
 	)
@@ -114,6 +121,7 @@ function armbian_register_commands() {
 
 		# inventory
 		["inventory-boards"]="TARGETS_FILE='something_that_does_not_exist_so_defaults_are_used'"
+		["inventory-artifacts"]="TARGETS_FILE='something_that_does_not_exist_so_defaults_are_used'"
 
 		# patching
 		["rewrite-kernel-patches"]="REWRITE_PATCHES='yes'" # rewrite the patches after round-tripping to git: "rebase patches"
@@ -129,6 +137,7 @@ function armbian_register_commands() {
 		["rewrite-kernel-config"]="WHAT='kernel' KERNEL_CONFIGURE='yes' ARTIFACT_WILL_NOT_BUILD='yes' ARTIFACT_IGNORE_CACHE='yes' ${common_cli_artifact_vars}"
 		["kernel-patch"]="WHAT='kernel' CREATE_PATCHES='yes' ${common_cli_artifact_interactive_vars} ${common_cli_artifact_vars}"
 		["kernel-dtb"]="WHAT='kernel' KERNEL_DTB_ONLY='yes' ${common_cli_artifact_interactive_vars} ${common_cli_artifact_vars}"
+		["dts-check"]="WHAT='kernel' DTS_VALIDATE='yes' ARTIFACT_WILL_NOT_BUILD='yes' ARTIFACT_IGNORE_CACHE='yes'" # Not really an artifact, but cli output only. Builds nothing.
 
 		["uboot"]="WHAT='uboot' ${common_cli_artifact_vars}"
 		["uboot-config"]="WHAT='uboot' UBOOT_CONFIGURE='yes' ${common_cli_artifact_interactive_vars} ${common_cli_artifact_vars}"
@@ -138,15 +147,12 @@ function armbian_register_commands() {
 
 		["firmware"]="WHAT='firmware' ${common_cli_artifact_vars}"
 		["firmware-full"]="WHAT='full_firmware' ${common_cli_artifact_vars}"
-		["armbian-config"]="WHAT='armbian-config' ${common_cli_artifact_vars}"
 		["armbian-zsh"]="WHAT='armbian-zsh' ${common_cli_artifact_vars}"
 		["armbian-plymouth-theme"]="WHAT='armbian-plymouth-theme' ${common_cli_artifact_vars}"
 		["fake-ubuntu-advantage-tools"]="WHAT='fake_ubuntu_advantage_tools' ${common_cli_artifact_vars}"
 
 		["armbian-base-files"]="WHAT='armbian-base-files' ${common_cli_artifact_vars}"
 		["armbian-bsp-cli"]="WHAT='armbian-bsp-cli' ${common_cli_artifact_vars}"
-		["armbian-bsp-desktop"]="WHAT='armbian-bsp-desktop' BUILD_DESKTOP='yes' ${common_cli_artifact_vars}"
-		["armbian-desktop"]="WHAT='armbian-desktop' BUILD_DESKTOP='yes' ${common_cli_artifact_vars}"
 
 		["oras-upload"]="ORAS_OPERATION='upload'"
 

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -21,10 +21,10 @@ function logging_init() {
 
 	# detect terminal background color
 	case "${COLORFGBG+${COLORFGBG#*;}}" in
-		[0-6]|8)
+		[0-6] | 8)
 			declare -g background_dark_or_light=dark
 			;;
-		7|9|1[0-5])
+		7 | 9 | 1[0-5])
 			declare -g background_dark_or_light=light
 			;;
 		*)
@@ -95,8 +95,7 @@ function logging_error_show_log() {
 			local prefix_sed_cmd="s/^/${prefix_sed_contents}/;"
 			CURRENT_LOGFILE="" display_alert "    👇👇👇 Showing logfile below 👇👇👇" "${logfile_to_show}" "err"
 
-			# shellcheck disable=SC2002 # my cat is great. thank you, shellcheck.
-			cat "${logfile_to_show}" | grep -v -e "^$" | sed -e "${prefix_sed_cmd}" 1>&2 # write it to stderr!!
+			grep -v -e "^$" "${logfile_to_show}" | sed -e "${prefix_sed_cmd}" 1>&2 # write it to stderr!!
 
 			CURRENT_LOGFILE="" display_alert "    👆👆👆 Showing logfile above 👆👆👆" "${logfile_to_show}" "err"
 		else

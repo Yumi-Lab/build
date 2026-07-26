@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -77,6 +77,9 @@ compile_armbian-zsh() {
 
 	# define default plugins
 	sed -i 's/^plugins=.*/plugins=(evalcache git git-extras debian tmux screen history extract colorize web-search docker)/' "${tmp_dir}/${armbian_zsh_dir}"/etc/skel/.zshrc
+
+	# add collection of Armbian BASH aliases also to ZSH. They are compatible
+	cat "${SRC}"/packages/bsp/common/etc/skel/.bash_aliases >> "${tmp_dir}/${armbian_zsh_dir}"/etc/skel/.zshrc
 
 	chmod 755 "${tmp_dir}/${armbian_zsh_dir}"/DEBIAN/postinst
 

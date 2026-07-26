@@ -1,13 +1,15 @@
 # Allwinner A64 quad core 2GB SoC Wi-Fi/BT Revision C
 BOARD_NAME="OLIMEX Teres A64"
+BOARD_VENDOR="olimex"
 
 # Specified in https://linux-sunxi.org/Allwinner_SoC_Family
 BOARDFAMILY="sun50iw1"
 
 BOARD_MAINTAINER="Kreyren"
+INTRODUCED="2017"
 
-# Legacy has been removed as it's too old and disfunctional for this board
-KERNEL_TARGET="legacy,current,edge"
+KERNEL_TARGET="current,edge,legacy"
+KERNEL_TEST_TARGET="current"
 
 # NOTE(Krey): IMAGE_PARTITION_TABLE="gpt" was not tested, uses msdos by default
 

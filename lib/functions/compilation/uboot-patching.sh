@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -26,7 +26,10 @@ function uboot_main_patching_python() {
 		"TARGET=${target_patchdir}"                           # TARGET is need for u-boot's SPI/SATA etc selection logic
 		"USERPATCHES_PATH=${USERPATCHES_PATH}"                # Needed to find the userpatches.
 		# For table generation to fit into the screen, or being large when in GHA.
-		"COLUMNS=${COLUMNS}"
+		# Prefer an explicit COLUMNS, else the terminal width captured at startup
+		# (ARMBIAN_TTY_COLUMNS); empty on piped/CI runs so patching.py picks a
+		# fixed wide width for logs instead of a synthetic narrow one.
+		"COLUMNS=${COLUMNS:-${ARMBIAN_TTY_COLUMNS:-}}"
 		"COLORFGBG=${COLORFGBG}"
 		"GITHUB_ACTIONS=${GITHUB_ACTIONS}"
 		# Needed so git can find the global .gitconfig, and Python can parse the PATH to determine which git to use.
@@ -49,7 +52,8 @@ function uboot_main_patching_python() {
 		"MAINTAINER_NAME=${MAINTAINER}"      # Name of the maintainer
 		"MAINTAINER_EMAIL=${MAINTAINERMAIL}" # Email of the maintainer
 	)
-	display_alert "Calling Python patching script" "for u-boot target" "info"
+	display_alert "Calling Python patching script for U-Boot:" "${BOOTSOURCE} - ${BOOTBRANCH}" "info"
+	display_alert "Using U-Boot patch dir:" "${BOOTPATCHDIR}" "info"
 
 	# "raw_command" is only for logging purposes.
 	raw_command="[...shortened u-boot patching...] ${PYTHON3_INFO[BIN]} ${SRC}/lib/tools/patching.py" \
