@@ -1,9 +1,15 @@
 # Rockchip RK3328 quad core 1GB 2 x GBE USB2
 BOARD_NAME="Nanopi R2C"
+BOARD_VENDOR="friendlyelec"
 BOARDFAMILY="rockchip64"
 BOARD_MAINTAINER=""
-BOOTCONFIG="nanopi-r2s-rk3328_defconfig"
+INTRODUCED="2020"
+BOOTCONFIG="nanopi-r2c-rk3328_defconfig"
+BOOTBRANCH_BOARD="tag:v2026.04"
+BOOTPATCHDIR="v2026.04"
+BOOT_SCENARIO="binman-atf-mainline"
 KERNEL_TARGET="current,edge"
+KERNEL_TEST_TARGET="current"
 DEFAULT_CONSOLE="serial"
 MODULES="g_serial"
 MODULES_BLACKLIST="rockchipdrm analogix_dp dw_mipi_dsi dw_hdmi gpu_sched lima hantro_vpu"
@@ -12,7 +18,7 @@ HAS_VIDEO_OUTPUT="no"
 BOOT_FDT_FILE="rockchip/rk3328-nanopi-r2-rev06.dtb"
 
 function post_family_tweaks__nanopi-r2c_rename_USB_LAN() {
-    display_alert "$BOARD" "Installing board tweaks" "info"
+	display_alert "$BOARD" "Installing board tweaks" "info"
 
 	# rename USB based network to lan0
 	mkdir -p $SDCARD/etc/udev/rules.d/

@@ -1,9 +1,15 @@
 # Rockchip RK3328 quad core 1GB 2 x GBE USB2 SPI
 BOARD_NAME="Orange Pi R1 Plus"
+BOARD_VENDOR="xunlong"
 BOARDFAMILY="rockchip64"
 BOARD_MAINTAINER=""
-BOOTCONFIG="orangepi_r1_plus_rk3328_defconfig"
+INTRODUCED="2020"
+BOOTCONFIG="orangepi-r1-plus-rk3328_defconfig"
+BOOTBRANCH_BOARD="tag:v2026.04"
+BOOTPATCHDIR="v2026.04"
+BOOT_SCENARIO="binman-atf-mainline"
 KERNEL_TARGET="current,edge"
+KERNEL_TEST_TARGET="current"
 DEFAULT_CONSOLE="serial"
 MODULES="g_serial"
 MODULES_BLACKLIST="rockchipdrm analogix_dp dw_mipi_dsi dw_hdmi gpu_sched lima hantro_vpu"
@@ -12,7 +18,7 @@ HAS_VIDEO_OUTPUT="no"
 BOOT_FDT_FILE="rockchip/rk3328-orangepi-r1-plus.dtb"
 
 function post_family_tweaks__opi-r1plus_rename_USB_LAN() {
-    display_alert "$BOARD" "Installing board tweaks" "info"
+	display_alert "$BOARD" "Installing board tweaks" "info"
 
 	# rename USB based network to lan0
 	mkdir -p $SDCARD/etc/udev/rules.d/
@@ -22,7 +28,7 @@ function post_family_tweaks__opi-r1plus_rename_USB_LAN() {
 }
 
 function post_family_tweaks_bsp__orangepi-r1plus_BSP() {
-    display_alert "Installing BSP firmware and fixups"
+	display_alert "Installing BSP firmware and fixups"
 
 	if [[ $BRANCH == legacy ]]; then
 

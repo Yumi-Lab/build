@@ -36,9 +36,7 @@ else
 	setenv plymouthargs "splash=verbose"
 fi
 
-setexpr bootargs sub "rootfstype=\\S*" "rootfstype=${rootfstype}" "${bootargs}"
-
-setenv bootargs "root=${rootdev} ${bootargs} ${consoleargs} partition_type=generic loglevel=${verbosity} ${plymouthargs} ${extraargs} ${extraboardargs}"
+setenv bootargs "${bootargs} root=${rootdev} rootfstype=${rootfstype} rw fsck.repair=yes rootwait ${consoleargs} partition_type=generic loglevel=${verbosity} ${plymouthargs} ${extraargs} ${extraboardargs}"
 
 load ${devtype} ${devnum} ${fdt_addr_r} ${prefix}dtb/${fdtfile}
 fdt addr ${fdt_addr_r}
@@ -89,13 +87,8 @@ fi
 
 # The symlinks for kernel and initrd.img are at different locations in debian and ubuntu
 # Check and load from a location that exists
-if test -e ${devtype} ${devnum} /vmlinuz; then
-	load ${devtype} ${devnum} ${kernel_addr_r} /vmlinuz
-	load ${devtype} ${devnum} ${ramdisk_addr_r} /initrd.img
-else
-	load ${devtype} ${devnum} ${kernel_addr_r} ${prefix}vmlinuz
-	load ${devtype} ${devnum} ${ramdisk_addr_r} ${prefix}initrd.img
-fi
+load ${devtype} ${devnum} ${kernel_addr_r} ${prefix}Image
+load ${devtype} ${devnum} ${ramdisk_addr_r} ${prefix}Initrd
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r}
 
 # Recompile with:

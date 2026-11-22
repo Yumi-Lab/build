@@ -1,16 +1,19 @@
 # Rockchip RK3399 hexa core 4GB RAM SoC WiFi/BT
 BOARD_NAME="Clockworkpi A06"
+BOARD_VENDOR="clockwork"
 BOARDFAMILY="rockchip64"
 BOARD_MAINTAINER=""
+INTRODUCED="2020"
 BOOTCONFIG="clockworkpi-a06-rk3399_defconfig"
 KERNEL_TARGET="current,edge"
+KERNEL_TEST_TARGET="current"
 FULL_DESKTOP="yes"
 BOOT_LOGO="no"
 BOOTBRANCH_BOARD="tag:v2022.04"
 BOOTPATCHDIR="u-boot-rockchip64-v2022.04"
 
 function post_family_tweaks_bsp__clockworkpi-a06() {
-    display_alert "Installing BSP firmware and fixups"
+	display_alert "Installing BSP firmware and fixups"
 
 	# rotate screen & disable dpms
 	mkdir -p "$destination"/etc/X11/xorg.conf.d

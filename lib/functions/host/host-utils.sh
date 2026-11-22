@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (c) 2013-2023 Igor Pecovnik, igor@armbian.com
+# Copyright (c) 2013-2026 Igor Pecovnik, igor@armbian.com
 #
 # This file is a part of the Armbian Build Framework
 # https://github.com/armbian/build/
@@ -42,7 +42,14 @@ wait_for_package_manager() {
 	done
 }
 
+# Host dependency entries may carry an optional "group::package" prefix (see prepare-host.sh).
+# The group is only meaningful for Docker layer splitting (docker.sh); everywhere else the
+# bare package name is used. Split on the *first* "::" so apt multiarch names (pkg:arch) survive.
+declare -g HOSTDEP_GROUP_DELIMITER="::"
+declare -g HOSTDEP_DEFAULT_GROUP="core"
+
 # Install the whitespace-delimited packages listed in the first parameter, in the host (not chroot).
+# Entries may be "group::package"; the optional group prefix is stripped before installing.
 # It handles correctly the case where all wanted packages are already installed, and in that case does nothing.
 # If packages are to be installed, it does an apt-get update first.
 function install_host_side_packages() {
@@ -63,6 +70,7 @@ function install_host_side_packages() {
 	currently_provided_packages=($(dpkg-query --show --showformat='${Provides}\n' | grep -v "^$" | sed -e 's/([^()]*)//g' | sed -e 's|,||g' | tr -s "\n" " "))
 
 	for PKG_TO_INSTALL in ${wanted_packages_string}; do
+		PKG_TO_INSTALL="${PKG_TO_INSTALL#*"${HOSTDEP_GROUP_DELIMITER}"}" # drop optional "group::" prefix
 		# shellcheck disable=SC2076 # I wanna match literally, thanks.
 		if [[ ! " ${currently_installed_packages[*]} " =~ " ${PKG_TO_INSTALL} " ]]; then
 			if [[ ! " ${currently_provided_packages[*]} " =~ " ${PKG_TO_INSTALL} " ]]; then
@@ -96,6 +104,10 @@ function is_root_or_sudo_prefix() {
 		# sudo binary found in path, use it.
 		display_alert "EUID is not 0" "sudo binary found, using it" "debug"
 		__my_sudo_prefix="sudo"
+	elif [[ -n "$(command -v doas)" ]]; then
+		# doas binary found in path, use it.
+		display_alert "EUID is not 0" "doas binary found, using it" "debug"
+		__my_sudo_prefix="doas"
 	else
 		# No root and no sudo binary. Bail out
 		exit_with_error "EUID is not 0 and no sudo binary found - Please install sudo or run as root"

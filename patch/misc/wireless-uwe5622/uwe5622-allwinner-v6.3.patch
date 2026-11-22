@@ -1252,7 +1252,7 @@ new file mode 100644
 index 000000000000..0f90a758b7bc
 --- /dev/null
 +++ b/drivers/net/wireless/uwe5622/tty-sdio/tty.c
-@@ -0,0 +1,885 @@
+@@ -0,0 +1,886 @@
 +/*
 + * Copyright (C) 2015 Spreadtrum Communications Inc.
 + *
@@ -1282,6 +1282,7 @@ index 000000000000..0f90a758b7bc
 +#include <linux/atomic.h>
 +#ifdef CONFIG_OF
 +#include <linux/of_device.h>
++#include <linux/of.h>
 +#endif
 +#include <linux/compat.h>
 +#include <linux/tty_flip.h>
@@ -166482,7 +166483,7 @@ new file mode 100644
 index 000000000000..42fb0a2b38a8
 --- /dev/null
 +++ b/drivers/net/wireless/uwe5622/unisocwcn/sdio/sdiohal_main.c
-@@ -0,0 +1,2313 @@
+@@ -0,0 +1,2314 @@
 +/*
 + * Copyright (C) 2017 Spreadtrum Communications Inc.
 + *
@@ -166508,6 +166509,7 @@ index 000000000000..42fb0a2b38a8
 +#include <linux/module.h>
 +#include <linux/of_device.h>
 +#include <linux/of_gpio.h>
++#include <linux/of_platform.h>
 +#include <linux/pm_runtime.h>
 +#include <linux/mmc/card.h>
 +#include <linux/mmc/core.h>

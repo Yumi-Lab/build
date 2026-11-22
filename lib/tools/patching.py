@@ -9,6 +9,8 @@
 #
 import logging
 import os
+import shutil
+import sys
 
 import rich.box
 # Let's use GitPython to query and manipulate the git repo
@@ -44,6 +46,7 @@ PATCH_DIRS_TO_APPLY = armbian_utils.parse_env_for_tokens("PATCH_DIRS_TO_APPLY")
 APPLY_PATCHES = armbian_utils.get_from_env("APPLY_PATCHES")
 PATCHES_TO_GIT = armbian_utils.get_from_env("PATCHES_TO_GIT")
 REWRITE_PATCHES = armbian_utils.get_from_env("REWRITE_PATCHES")
+REWRITE_PATCHES_NEEDING_REBASE = armbian_utils.get_from_env("REWRITE_PATCHES_NEEDING_REBASE")
 SPLIT_PATCHES = armbian_utils.get_from_env("SPLIT_PATCHES")
 ALLOW_RECREATE_EXISTING_FILES = armbian_utils.get_from_env("ALLOW_RECREATE_EXISTING_FILES")
 GIT_ARCHEOLOGY = armbian_utils.get_from_env("GIT_ARCHEOLOGY")
@@ -53,6 +56,7 @@ apply_patches_to_git = PATCHES_TO_GIT == "yes"
 git_archeology = GIT_ARCHEOLOGY == "yes"
 fast_archeology = FAST_ARCHEOLOGY == "yes"
 rewrite_patches_in_place = REWRITE_PATCHES == "yes"
+rewrite_only_patches_needing_rebase = REWRITE_PATCHES_NEEDING_REBASE == "yes"
 split_patches = SPLIT_PATCHES == "yes"
 apply_options = {
 	"allow_recreate_existing_files": (ALLOW_RECREATE_EXISTING_FILES == "yes"),
@@ -357,6 +361,12 @@ if apply_patches:
 			if one_patch.rewritten_patch is None:
 				log.warning(f"Skipping patch {one_patch} from rewrite because it was not rewritten.")
 				continue
+			
+			# Skip the patch if it doesn't need rebasing
+			if rewrite_only_patches_needing_rebase:
+				if "needs_rebase" not in one_patch.problems:
+					log.info(f"Skipping patch {one_patch} from rewrite because it doesn't need a rebase.")
+					continue
 
 			if one_patch.parent not in patch_files_by_parent:
 				patch_files_by_parent[one_patch.parent] = []
@@ -365,8 +375,8 @@ if apply_patches:
 		for parent in patch_files_by_parent:
 			patches = patch_files_by_parent[parent]
 			parent.rewrite_patch_file(patches)
-		UNAPPLIED_PATCHES = [one_patch for one_patch in VALID_PATCHES if (not one_patch.applied_ok) or (one_patch.rewritten_patch is None)]
-		for failed_patch in UNAPPLIED_PATCHES:
+		FAILED_PATCHES = [one_patch for one_patch in VALID_PATCHES if (not one_patch.applied_ok) or (one_patch.rewritten_patch is None)]
+		for failed_patch in FAILED_PATCHES:
 			log.info(
 				f"Consider removing {failed_patch.parent.full_file_path()}(:{failed_patch.counter}); "
 				f"it was not applied successfully.")
@@ -435,16 +445,33 @@ from rich.console import Console
 from rich.table import Table
 from rich.syntax import Syntax
 
-# console width is COLUMNS env var minus 12, or just 160 if GITHUB_ACTIONS env is not empty
-console_width = (int(os.environ.get("COLUMNS", 160)) - 12) if os.environ.get("GITHUB_ACTIONS", "") == "" else 160
+CONSOLE_FALLBACK_WIDTH = 160   # no terminal to measure (CI logs, piped output)
+CONSOLE_WIDTH_MARGIN = 12      # columns reserved for table borders and cell padding
+CONSOLE_MIN_WIDTH = 40         # floor so very narrow terminals still render a table
+
+# Match the table to the width the reader actually has, so a wide and a narrow
+# terminal render the same patch set the same way (just taller/shorter):
+#  - GITHUB_ACTIONS: fixed width, CI logs have no real terminal.
+#  - a real terminal (or an explicit COLUMNS): use its width; get_terminal_size
+#    honours COLUMNS first, then queries the tty.
+#  - redirected/piped output: fixed width so logs stay legible.
+if os.environ.get("GITHUB_ACTIONS", "") != "":
+	console_width = CONSOLE_FALLBACK_WIDTH
+elif sys.stdout.isatty() or os.environ.get("COLUMNS", "").isdigit():
+	console_width = max(shutil.get_terminal_size((CONSOLE_FALLBACK_WIDTH, 25)).columns - CONSOLE_WIDTH_MARGIN, CONSOLE_MIN_WIDTH)
+else:
+	console_width = CONSOLE_FALLBACK_WIDTH
 console = Console(color_system="standard", width=console_width, highlight=False)
 
 # Use Rich to print a summary of the patches
 if True:
 	summary_table = Table(title=f"Summary of {PATCH_TYPE} patches", show_header=True, show_lines=True, box=rich.box.ROUNDED)
-	summary_table.add_column("Patch / Status", overflow="fold", min_width=25)
-	summary_table.add_column("Diffstat / files", max_width=35)
-	summary_table.add_column("Author / Subject", overflow="ellipsis", min_width=25, max_width=40)
+	# Small min_width so all three columns still fit (and fold) down to
+	# CONSOLE_MIN_WIDTH; with min_width=25 the table exceeds ~70 cols and rich
+	# crops the right columns instead of folding them.
+	summary_table.add_column("Patch / Status", overflow="fold", min_width=10)
+	summary_table.add_column("Diffstat / files", overflow="fold", max_width=35)
+	summary_table.add_column("Author / Subject", overflow="fold", min_width=10, max_width=40)
 	for one_patch in VALID_PATCHES:
 		summary_table.add_row(
 			# (one_patch.markdown_name(skip_markdown=True)),  # + " " + one_patch.markdown_problems()
@@ -477,7 +504,13 @@ if any_failed_to_apply:
 			one_patch.rich_patch_output(),
 			reject_compo
 		)
-	console.print(summary_table)
+	# Reject diagnostics need room regardless of the reader's terminal: rich's
+	# Syntax word-wrap elides long unbroken diff lines with an ellipsis when the
+	# column is narrow. Give this table at least the fallback width (so a narrow
+	# terminal still gets room), but the full adaptive width when it is wider, so
+	# a wide terminal keeps every reject line it could show before.
+	console_failed = Console(color_system="standard", width=max(console_width, CONSOLE_FALLBACK_WIDTH), highlight=False)
+	console_failed.print(summary_table)
 
 if exit_with_exception is not None:
 	raise exit_with_exception
